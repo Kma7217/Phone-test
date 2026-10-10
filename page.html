@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPhone Orientation Monitor</title>
+
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #111;
+    color: #fff;
+    margin: 0;
+    padding: 16px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    border: none;
+    border-radius: 12px;
+    background: #007AFF;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.card {
+    background: #1c1c1e;
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.label {
+    color: #999;
+    font-size: 14px;
+}
+
+.value {
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+.status {
+    margin-top: 16px;
+    text-align: center;
+    color: #aaa;
+}
+</style>
+</head>
+<body>
+
+<h1>📱 iPhone Orientation Monitor</h1>
+
+<button id="enableBtn">Enable Sensors</button>
+
+<div class="grid">
+    <div class="card">
+        <div class="label">Alpha (Z)</div>
+        <div class="value" id="alpha">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Beta (X)</div>
+        <div class="value" id="beta">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Gamma (Y)</div>
+        <div class="value" id="gamma">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Compass</div>
+        <div class="value" id="heading">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Accel X</div>
+        <div class="value" id="ax">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Accel Y</div>
+        <div class="value" id="ay">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Accel Z</div>
+        <div class="value" id="az">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Screen</div>
+        <div class="value" id="screen">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Rot α</div>
+        <div class="value" id="ra">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Rot β</div>
+        <div class="value" id="rb">-</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Rot γ</div>
+        <div class="value" id="rg">-</div>
+    </div>
+</div>
+
+<div class="status" id="status">
+    Waiting for permission...
+</div>
+
+<script>
+
+function fmt(v) {
+    return (v == null) ? "-" : Number(v).toFixed(2);
+}
+
+function updateScreenOrientation() {
+    const angle =
+        (screen.orientation && screen.orientation.angle) ??
+        window.orientation ??
+        0;
+
+    document.getElementById("screen").textContent =
+        angle + "°";
+}
+
+async function enableSensors() {
+    const status = document.getElementById("status");
+
+    try {
+        if (
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
+            const response =
+                await DeviceOrientationEvent.requestPermission();
+
+            if (response !== "granted") {
+                status.textContent = "Orientation permission denied";
+                return;
+            }
+        }
+
+        if (
+            typeof DeviceMotionEvent !== "undefined" &&
+            typeof DeviceMotionEvent.requestPermission === "function"
+        ) {
+            const response =
+                await DeviceMotionEvent.requestPermission();
+
+            if (response !== "granted") {
+                status.textContent = "Motion permission denied";
+                return;
+            }
+        }
+
+        window.addEventListener("deviceorientation", e => {
+            document.getElementById("alpha").textContent = fmt(e.alpha);
+            document.getElementById("beta").textContent = fmt(e.beta);
+            document.getElementById("gamma").textContent = fmt(e.gamma);
+
+            if (e.webkitCompassHeading != null) {
+                document.getElementById("heading").textContent =
+                    fmt(e.webkitCompassHeading) + "°";
+            }
+        });
+
+        window.addEventListener("devicemotion", e => {
+
+            const accel =
+                e.accelerationIncludingGravity || {};
+
+            document.getElementById("ax").textContent =
+                fmt(accel.x);
+
+            document.getElementById("ay").textContent =
+                fmt(accel.y);
+
+            document.getElementById("az").textContent =
+                fmt(accel.z);
+
+            if (e.rotationRate) {
+                document.getElementById("ra").textContent =
+                    fmt(e.rotationRate.alpha);
+
+                document.getElementById("rb").textContent =
+                    fmt(e.rotationRate.beta);
+
+                document.getElementById("rg").textContent =
+                    fmt(e.rotationRate.gamma);
+            }
+        });
+
+        updateScreenOrientation();
+
+        window.addEventListener(
+            "orientationchange",
+            updateScreenOrientation
+        );
+
+        status.textContent = "Sensors active ✅";
+
+    } catch (err) {
+        status.textContent = "Error: " + err.message;
+    }
+}
+
+document
+    .getElementById("enableBtn")
+    .addEventListener("click", enableSensors);
+
+</script>
+
+</body>
+</html>
